@@ -1,0 +1,228 @@
+# Generation script for RISC-V Vector Intrinsics in Rust
+
+This repository contains a generation script to generate all the RISC-V Vector
+Intrinsics for the [Scalable Vector RFC] in Rust.
+
+## Usage
+
+```bash
+./generate.py > rvv.rs
+```
+
+## Status
+
+- [ ] Memory Instructions
+  - [ ] Unit-Stride
+  - [ ] Unit-Stride Mask
+  - [ ] Unit-Stride Fault-Only-First Loads
+  - [ ] Unit-Stride Segment
+  - [ ] Constant-Stride
+  - [ ] Constant-Stride Segment
+  - [ ] Indexed Unordered
+  - [ ] Indexed Ordered
+  - [ ] Indexed Unordered Segment
+  - [ ] Indexed Ordered Segment
+  - [ ] Whole Register
+- [ ] Integer Arithmetic Instructions
+  - [ ] Single-Width Add
+  - [ ] Single-Width Subtract
+  - [ ] Single-Width Reverse Subtract
+  - [ ] Widening Add
+    - [ ] Signed
+    - [ ] Unsigned
+  - [ ] Widening Subtract
+    - [ ] Signed
+    - [ ] Unsigned
+  - [ ] Extension
+  - [ ] Add-with-Carry
+  - [ ] Subtract-with-Borrow
+  - [ ] Bitwise Logical
+    - [ ] And
+    - [ ] Or
+    - [ ] Xor
+  - [ ] Single-Width Shift
+    - [ ] Sll
+    - [ ] Srl
+    - [ ] Sra
+  - [ ] Narrowing Right Shift
+    - [ ] Srl
+    - [ ] Sra
+  - [ ] Compare
+    - [ ] Seq
+    - [ ] Sne
+    - [ ] Sltu
+    - [ ] Slt
+    - [ ] Sleu
+    - [ ] Sle
+    - [ ] Sgtu
+    - [ ] Sgt
+  - [ ] Min
+    - [ ] Signed
+    - [ ] Unsigned
+  - [ ] Max
+    - [ ] Signed
+    - [ ] Unsigned
+  - [ ] Single-Width Multiply
+    - [ ] Low
+      - [ ] Signed
+    - [ ] High
+      - [ ] Signed
+      - [ ] Unsigned
+      - [ ] Signed-Unsigned
+  - [ ] Divide
+    - [ ] Signed
+    - [ ] Unsigned
+  - [ ] Remainder
+    - [ ] Signed
+    - [ ] Unsigned
+  - [ ] Widening Multiply
+    - [ ] Signed
+    - [ ] Unsigned
+    - [ ] Signed-Unsigned
+  - [ ] Single-Width Multiply-Add
+    - [ ] Multiply-Add Overwrite AddEnd
+    - [ ] Multiply-Sub Overwrite MinUEnd
+    - [ ] Multiply-Add Overwrite Multiplicand
+    - [ ] Multiply-Sub Overwrite Multiplicand
+  - [ ] Widening Multiply-Add
+    - [ ] Unsigned Multiply-Add Overwrite AddEnd
+    - [ ] Signed Multiply-Add Overwrite AddEnd
+    - [ ] Signed-Unsigned Multiply-Add Overwrite AddEnd
+    - [ ] Unsigned-Signed Multiply-Add Overwrite AddEnd
+  - [ ] Merge
+  - [ ] Move
+  - [ ] Move
+- [ ] Fixed-Point
+  - [ ] Single-Width Saturating Add
+    - [ ] Signed
+    - [ ] Unsigned
+  - [ ] Single-Width Saturating Subtract
+    - [ ] Signed
+    - [ ] Unsigned
+  - [ ] Single-Width Averaging Add
+    - [ ] Signed
+    - [ ] Unsigned
+  - [ ] Single-Width Averaging Subtract
+    - [ ] Signed
+    - [ ] Unsigned
+  - [ ] Single-Width Fractional Multiply with Rounding and Saturation
+  - [ ] Single-Width Scaling Shift
+    - [ ] Srl
+    - [ ] Sra
+  - [ ] Narrowing Fixed-Point Clip
+    - [ ] Signed
+    - [ ] Unsigned
+- [ ] Floating-Point
+  - [ ] Single-Width Add
+  - [ ] Single-Width Subtract
+  - [ ] Single-Width Reverse Subtract
+  - [ ] Widening Add
+  - [ ] Widening Subtract
+  - [ ] Single-Width Multiply
+  - [ ] Single-Width Divide
+  - [ ] Single-Width Reverse Divide
+  - [ ] Widening Multiply
+  - [ ] Single-Width Fused Multiply-Add
+    - [ ] Multiply-Accumulate Overwrite Addend
+    - [ ] Negate-(Multiply-Accumulate) Overwrite Subtrahend
+    - [ ] Multiply-Subtract-Accumulator Overwrite Subtrahend
+    - [ ] Negate-(Multiply-Subtract-Accumulator) Overwrite Minuend
+    - [ ] Multiply-Add Overwrite Multiplicand
+    - [ ] Negate-(Multiply-Add) Overwrite Multiplicand
+    - [ ] Multiply-Sub Overwrite Multiplicand
+    - [ ] Negate-(Multiply-Sub) Overwrite Multiplicand
+  - [ ] Widening Fused Multiply-Add
+    - [ ] Multiply-Accumulate Overwrite Addend
+    - [ ] Negate-(Multiply-Accumulate) Overwrite Addend
+    - [ ] Multiply-Subtract-Accumulator Overwrite Addend
+    - [ ] Negate-(Multiply-Subtract-Accumulator) Overwrite Addend
+  - [ ] Square-Root
+  - [ ] Reciprocal Square-Root Estimate
+  - [ ] Reciprocal Estimate
+  - [ ] Min
+  - [ ] Max
+  - [ ] Sign-Injection
+  - [ ] Compare
+    - [ ] Eq
+    - [ ] Ne
+    - [ ] Lt
+    - [ ] Le
+    - [ ] Gt
+    - [ ] Ge
+  - [ ] Classify
+  - [ ] Merge
+  - [ ] Single-Width Integer Type-Convert
+    - [ ] Float to Unsigned Integer
+    - [ ] Float to Signed Integer
+    - [ ] Float to Unsigned Integer Truncating
+    - [ ] Float to Signed Integer Truncating
+    - [ ] Unsigned Integer to Float
+    - [ ] Signed Integer to Float
+  - [ ] Widening Integer Type-Convert
+    - [ ] Float to Double-Width Unsigned Integer
+    - [ ] Float to Double-Width Signed Integer
+    - [ ] Float to Double-Width Unsigned Integer Truncating
+    - [ ] Float to Double-Width Signed Integer Truncating
+    - [ ] Unsigned Integer to Double-Width Float
+    - [ ] Signed Integer to Double-Width Float
+    - [ ] Single-Width Float to Double-Width Float
+  - [ ] Narrowing Integer Type-Convert
+    - [ ] Double-Width Float to Unsigned Integer
+    - [ ] Double-Width Float to Signed Integer
+    - [ ] Double-Width Float to Unsigned Integer Truncating
+    - [ ] Double-Width Float to Signed Integer Truncating
+    - [ ] Double-Width Unsigned Integer to Float
+    - [ ] Double-Width Signed Integer to Float
+    - [ ] Double-Width Float to Single-Width Float
+    - [ ] Double-Width Float to Single-Width Float rounding towards odd
+- [ ] Reduction
+  - [ ] Single-Width Integer Reduction
+    - [ ] Sum
+    - [ ] Unsigned Max
+    - [ ] Signed Max
+    - [ ] Unsigned Min
+    - [ ] Signed Min
+    - [ ] And
+    - [ ] Or
+
+    - [ ] Xor
+  - [ ] Widening Integer Reduction
+    - [ ] Unsigned Sum
+    - [ ] Signed Sum
+  - [ ] Single-Width Floating-Point Reduction
+    - [ ] Ordered Sum
+    - [ ] Unordered Sum
+    - [ ] Min
+    - [ ] Max
+  - [ ] Widening Floating-Point Reduction
+    - [ ] Ordered Sum
+    - [ ] Unordered Sum
+- [ ] Mask
+  - [ ] Mask-Register Logical
+    - [ ] And
+    - [ ] Negate-And
+    - [ ] And-Negate
+    - [ ] Xor
+    - [ ] Or
+    - [ ] Nor
+    - [ ] Or-Negate
+    - [ ] Xnor
+  - [ ] Count Population
+  - [ ] Find-first-set bit
+  - [ ] Set-before-first bit
+  - [ ] Set-including-first bit
+  - [ ] Set-only-first bit
+  - [ ] Element Index
+- [ ] Permutation
+  - [ ] Integer Scalar Move
+  - [ ] Floating-Point Scalar Move
+  - [ ] Slide
+  - [ ] Slideup
+  - [ ] Slidedown
+  - [ ] Slide1up
+  - [ ] Slide1down
+  - [ ] Gather
+  - [ ] Compress
+  - [ ] Whole Register Move
+
+[Scalable Vector RFC]: https://github.com/rust-lang/rfcs/pull/3268
