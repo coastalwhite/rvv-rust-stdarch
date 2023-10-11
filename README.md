@@ -12,20 +12,20 @@ Intrinsics for the [Scalable Vector RFC] in Rust.
 ## Status
 
 - [ ] Memory Instructions
-  - [ ] Unit-Stride
-  - [ ] Unit-Stride Mask
-  - [ ] Unit-Stride Fault-Only-First Loads
+  - [x] Unit-Stride
+  - [x] Unit-Stride Mask
+  - [x] Unit-Stride Fault-Only-First Loads
   - [ ] Unit-Stride Segment
-  - [ ] Constant-Stride
-  - [ ] Constant-Stride Segment
+  - [x] Constant-Stride
+  - [x] Constant-Stride Segment
   - [ ] Indexed Unordered
   - [ ] Indexed Ordered
   - [ ] Indexed Unordered Segment
   - [ ] Indexed Ordered Segment
   - [ ] Whole Register
 - [ ] Integer Arithmetic Instructions
-  - [ ] Single-Width Add
-  - [ ] Single-Width Subtract
+  - [x] Single-Width Add
+  - [x] Single-Width Subtract
   - [ ] Single-Width Reverse Subtract
   - [ ] Widening Add
     - [ ] Signed

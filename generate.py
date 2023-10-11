@@ -1,16 +1,39 @@
 #! /usr/bin/env python
 
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import List, Tuple
 
-LMULS = [1, 2, 4, 8, 16, 32]
-EEWS = [8, 16, 32, 64]
+class LMUL(Enum):
+    MF8 = 1
+    MF4 = 2
+    MF2 = 4
+    M1  = 8
+    M2  = 16
+    M4  = 32
+    M8  = 64
+
+    def to_str(self) -> str:
+        return self.name[1:].lower()
+
+class EEW(Enum):
+    E8 = 8
+    E16 = 16
+    E32 = 32
+    E64 = 64
+
+ALL_CONFIGURATIONS: List[Tuple[EEW, LMUL]] = []
+
+for eew in EEW:
+    for lmul in LMUL:
+        if (eew.value << 3) >= lmul.value:
+            ALL_CONFIGURATIONS.append((eew, lmul))
 
 class RustTypeVariant(Enum):
     XREG = 0
     VREG = 1
-    CONST_PTR = 2
-    MUT_PTR = 3
+    MASK = 2
+    CONST_PTR = 3
+    MUT_PTR = 4
 
 class RustType:
     def __init__(self, variant: RustTypeVariant, llvm_type: str, rust_type: str) -> None:
@@ -18,34 +41,31 @@ class RustType:
         self.LLVM_TYPE = llvm_type
         self.RUST_TYPE = rust_type
 
-def lmul_to_str(lmul: int) -> str:
-    return {
-        1: "f8",
-        2: "f4",
-        3: "f2",
-        4:  "1",
-        8:  "2",
-        16: "4",
-        32: "8",
-    }[lmul]
-
-def init_vreg(eew: int, lmul: int) -> RustType:
-    assert eew in EEWS
-    assert lmul in LMULS
-
-    TY = f"vint{eew}m{lmul_to_str(lmul)}"
+def init_vreg(eew: EEW, lmul: LMUL) -> RustType:
+    TY = f"vint{eew.value}m{lmul.to_str()}"
     return RustType(RustTypeVariant.VREG, TY, TY)
 
-def init_const_ptr(bits: int) -> RustType:
-    assert bits in EEWS
-    return RustType(RustTypeVariant.CONST_PTR, f"*const i{bits}", f"*const u{bits}")
+def init_mask(lmul: LMUL) -> RustType:
+    TY = f"vmaskm{lmul.to_str()}"
+    return RustType(RustTypeVariant.MASK, TY, TY)
 
-def init_mut_ptr(bits: int) -> RustType:
-    assert bits in EEWS
-    return RustType(RustTypeVariant.MUT_PTR, f"*mut i{bits}", f"*mut u{bits}")
+def init_const_ptr(bits: EEW) -> RustType:
+    return RustType(
+        RustTypeVariant.CONST_PTR,
+        f"*const i{bits.value}",
+        f"*const u{bits.value}"
+    )
+
+def init_mut_ptr(bits: EEW) -> RustType:
+    return RustType(
+        RustTypeVariant.MUT_PTR,
+        f"*mut i{bits.value}",
+        f"*mut u{bits.value}"
+    )
 
 XREG = RustType(RustTypeVariant.XREG, "i64", "u64")
 VREG = init_vreg
+MASK = init_mask
 CONST_PTR = init_const_ptr
 MUT_PTR = init_mut_ptr
 
@@ -116,13 +136,15 @@ pub unsafe fn {name}({params}) {ret_type}{{
         ) else f" as {ret_type.RUST_TYPE}",
     )
 
-def parse_type(s: str, elem: int, lmul) -> RustType:
+def parse_type(s: str, elem: EEW, lmul: LMUL) -> RustType:
     s = s.lower().strip()
     
     if s == "xr":
         return XREG
     elif s == "vr":
         return VREG(elem, lmul)
+    elif s == "mask":
+        return MASK(lmul)
     elif s == "&e":
         return CONST_PTR(elem)
     elif s == "*e":
@@ -130,7 +152,7 @@ def parse_type(s: str, elem: int, lmul) -> RustType:
     
     raise Exception(f"Unknown explict type for '{s}'")
 
-def parse_param(s: str, elem: int, lmul: int) -> Tuple[Tuple[str, RustType], bool, str]:
+def parse_param(s: str, elem: EEW, lmul: LMUL) -> Tuple[Tuple[str, RustType], bool, str]:
     param_end = s.find(',')
     is_end = param_end < 0
     if param_end < 0:
@@ -153,6 +175,8 @@ def parse_param(s: str, elem: int, lmul: int) -> Tuple[Tuple[str, RustType], boo
             ty = XREG
         elif ident == "_p":
             ty = VREG(elem, lmul)
+        elif ident == "mask":
+            ty = MASK(lmul)
         else:
             raise Exception(f"Unknown implicit type for {ident}")
     else:
@@ -161,14 +185,14 @@ def parse_param(s: str, elem: int, lmul: int) -> Tuple[Tuple[str, RustType], boo
     
     return ((ident, ty), is_end, s[param_end+1:])
 
-def parse_intrinsic_str(s: str, elem: int, lmul: int):
+def parse_intrinsic_str(s: str, elem: EEW, lmul: LMUL):
     name_end = s.find('(')
     if name_end < 0:
         raise Exception("NO PARAMS")
     name = s[:name_end].strip()
     if len(name) == 0:
         raise Exception("NO NAME")
-    name = name.format(E = elem, L = lmul)
+    name = name.format(E = elem.value, L = lmul.to_str())
     
     s = s[name_end+1:].strip()
     params = []
@@ -203,7 +227,8 @@ def parse_intrinsic_str(s: str, elem: int, lmul: int):
     s = s[sig_end+1:]
     
     llvm_link = s.strip()
-    llvm_link = llvm_link.replace("NXV", f"nxv{lmul}i{elem}")
+    llvm_link = llvm_link.replace("NXV", f"nxv{lmul.value}i{elem.value}")
+    llvm_link = llvm_link.replace("NXM", f"nxv{lmul.value}i1")
     llvm_link = llvm_link.replace("iX", f"i64")
     
     assert name.lower() == name
@@ -219,16 +244,15 @@ def parse_intrinsic_str(s: str, elem: int, lmul: int):
     
 def G(intrinsic_strs: List[str]):
     for s in intrinsic_strs:
-        for elem in EEWS:
-            for lmul in LMULS:
-                intrinsic = parse_intrinsic_str(s, elem, lmul)
-                print(intrinsic_fn_str(
-                    name = intrinsic["name"],
-                    params = intrinsic["params"],
-                    llvm_link = intrinsic["llvm_link"],
-                    poison = intrinsic["poison"],
-                    ret_type = intrinsic["ret_type"],
-                ))
+        for (elem, lmul) in ALL_CONFIGURATIONS:
+            intrinsic = parse_intrinsic_str(s, elem, lmul)
+            print(intrinsic_fn_str(
+                name = intrinsic["name"],
+                params = intrinsic["params"],
+                llvm_link = intrinsic["llvm_link"],
+                poison = intrinsic["poison"],
+                ret_type = intrinsic["ret_type"],
+            ))
 
 print("""
 /// AUTOGENERATED FILE
@@ -242,22 +266,45 @@ macro_rules! undef {
 }
 """)
 
-for elem in EEWS:
-    for lmul in LMULS:
-        print("""
+# Integer Types
+for (elem, lmul) in ALL_CONFIGURATIONS:
+    print("""
 #[repr(simd, scalable({elem})]
 #[allow(non_camel_case_types)]
 pub struct {name} {{
     _ty: [u{elem}],
 }}
-        """.strip().format(elem = elem, name = VREG(elem, lmul).RUST_TYPE))
+    """.strip().format(elem = elem.value, name = VREG(elem, lmul).RUST_TYPE))
+
+# Mask Types
+for lmul in LMUL:
+    print("""
+#[repr(simd, scalable(1)]
+#[allow(non_camel_case_types)]
+pub struct {name} {{
+    _ty: [bool],
+}}
+    """.strip().format(name = MASK(lmul).RUST_TYPE))
         
 G([
-    "vle{E}_m{L}_v(_p,base:&E,vl)->VR:vle.NXV.iX",
-    "vse{E}_m{L}_v(vs,base:*E,vl):vse.NXV.iX",
-    "vlse{E}_m{L}_v(_p,base:&E,bstride:XR,vl)->VR:vlse.NXV.iX",
-    "vsse{E}_m{L}_v(vs,base:*E,bstride:XR,vl):vsse.NXV.iX",
-    "vle{E}ff_m{L}_v(_p,base:&E,vl)->VR:vleff.NXV.iX",
-    "vadd_e{E}_m{L}_vv(_p,vs2,vs1,vl)->VR:vadd.NXV.NXV.iX",
-    "vsub_e{E}_m{L}_vv(_p,vs2,vs1,vl)->VR:vsub.NXV.NXV.iX",
+    "vle{E}_v_i{E}m{L}  (_p,base:&E,     vl)->VR:vle.NXV.iX",
+    "vle{E}_v_i{E}m{L}_m(_p,base:&E,mask,vl)->VR:vle.mask.NXV.iX",
+
+    "vse{E}_v_i{E}m{L}  (vs,base:*E,     vl):vse.NXV.iX",
+    "vse{E}_v_i{E}m{L}_m(vs,base:*E,mask,vl):vse.mask.NXV.iX",
+
+    "vlse{E}_v_i{E}m{L}  (_p,base:&E,bstride:XR,     vl)->VR:vlse.NXV.iX",
+    "vlse{E}_v_i{E}m{L}_m(_p,base:&E,bstride:XR,mask,vl)->VR:vlse.mask.NXV.iX",
+
+    "vsse{E}_v_i{E}m{L}  (vs,base:*E,bstride:XR,     vl):vsse.NXV.iX",
+    "vsse{E}_v_i{E}m{L}_m(vs,base:*E,bstride:XR,mask,vl):vsse.mask.NXV.iX",
+
+    "vle{E}ff_v_i{E}m{L}  (_p,base:&E,     vl)->VR:vleff.NXV.iX",
+    "vle{E}ff_v_i{E}m{L}_m(_p,base:&E,mask,vl)->VR:vleff.mask.NXV.iX",
+
+    "vadd_vv_i{E}m{L}  (_p,vs2,vs1,     vl)->VR:vadd.NXV.NXV.iX",
+    "vadd_vv_i{E}m{L}_m(_p,vs2,vs1,mask,vl)->VR:vadd.mask.NXV.NXV.iX",
+
+    "vsub_vv_i{E}m{L}  (_p,vs2,vs1,     vl)->VR:vsub.NXV.NXV.iX",
+    "vsub_vv_i{E}m{L}_m(_p,vs2,vs1,mask,vl)->VR:vsub.mask.NXV.NXV.iX",
 ])
