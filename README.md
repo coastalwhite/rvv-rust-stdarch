@@ -18,8 +18,9 @@ Intrinsics for the [Scalable Vector RFC] in Rust.
   - [ ] Unit-Stride Segment
   - [x] Constant-Stride
   - [x] Constant-Stride Segment
-  - [ ] Indexed Unordered
-  - [ ] Indexed Ordered
+  - [x] Indexed Unordered
+  - [x] Indexed Ordered
+  - [x] Mask
   - [ ] Indexed Unordered Segment
   - [ ] Indexed Ordered Segment
   - [ ] Whole Register
